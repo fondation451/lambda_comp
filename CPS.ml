@@ -119,6 +119,15 @@ let rec cps_lambda t c namespace =
   end
 ;;
 
+let add_headers t =
+  let x = Atom.fresh "x" in
+  S.Let(T.identity_fun, S.Lam(S.NoSelf, x, S.Var(x)), t)
+;;
+
 let rec cps_term (t : S.term) : T.term =
-  cps_lambda t (COBJ(Atom.fresh "BASE")) (mk_fun ())
+  let x = Atom.fresh "x" in
+  T.LetBlo(
+    T.end_fun,
+    T.Lam(T.NoSelf, [x], T.Exit),
+    cps_lambda (add_headers t) (COBJ(T.end_fun)) (mk_fun ()))
 ;;
