@@ -46,3 +46,8 @@ and term =
   | Let of variable * term * term
 
 [@@deriving show { with_path = false }]
+
+let identity () =
+  let x = Atom.fresh "x" in
+  Lam(NoSelf, x, Var(x))
+;;

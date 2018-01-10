@@ -76,6 +76,8 @@ and term =
 
 [@@deriving show { with_path = false }]
 
+let identity_fun = Atom.fresh "identity";;
+
 (* -------------------------------------------------------------------------- *)
 
 (* Constructor functions. *)
