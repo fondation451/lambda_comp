@@ -76,7 +76,7 @@ and term =
 
 [@@deriving show { with_path = false }]
 
-let identity_fun = Atom.fresh "identity";;
+let identity_fun = Atom.fresh "IDENTITY";;
 let end_fun = Atom.fresh "end";;
 
 (* -------------------------------------------------------------------------- *)
