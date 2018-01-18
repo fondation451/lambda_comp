@@ -1,2 +1,4 @@
-let fonction = fun f -> fun x -> f x in
-fonction
+let x = 5 in
+let print_fun = fun y -> print y in
+let ma_fonction = fun f -> f x in
+ma_fonction print_fun

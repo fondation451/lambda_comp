@@ -1,1 +1,2 @@
-fun f -> fun x -> f x
+let print_fun = fun y -> print y in
+(fun f -> fun x -> f x) print_fun 10
