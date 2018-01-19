@@ -1,2 +1,2 @@
-let rec f = fun x -> f (print (x+1)) in
-f 0
+let rec f = fun x -> ifzero x then 1 else print (x * f(x-1)) in
+f 10
