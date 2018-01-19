@@ -28,18 +28,21 @@ and term =
 
 and block =
   | Con of tag * value list *)
-
+(*
 let find_fv_value fv var_env =
   let rec loop fv out =
     match fv with
     |[] -> List.rev out
     |var::t -> try
 (*      Printf.printf "LOOKING FOR VAR %s\n\n" (Atom.hint var);*)
-      loop t ((VarMap.find var var_env)::out)
+      let tmp = VarMap.find var var_env in
+      match tmp with
+      |T.VVar(_) -> loop t ((T.VVar(var))::out)
+      |_ -> loop t (tmp::out)
     with Not_found -> assert false
   in loop fv []
 ;;
-
+*)
 let normalize_fun_arg var_l =
   let rec loop var_l len =
     if len >= apply_nb_arg then
@@ -56,12 +59,6 @@ let normalize_fun_call v_l =
     else
       loop ((T.VLit(0))::v_l) (len+1)
   in loop (List.rev v_l) (List.length v_l)
-;;
-
-let binded k m =
-  try
-    let _ = VarMap.find k m in true
-  with Not_found -> false
 ;;
 
 let rec defun t evar efun apply lambda =
@@ -97,11 +94,11 @@ let rec defun t evar efun apply lambda =
     let branch = T.Branch(tag, fv, t_lam') in
     let efun = VarMap.add var (tag, fv) efun in
     let evar = VarMap.add var (T.VVar(var)) evar in
+    let t'', evar, efun, apply = defun t' evar efun (branch::apply) lambda in
 (*    Printf.printf "FV fun : %s%d : \n" (Atom.hint var) (Atom.identity var);
     List.iter (fun var -> Printf.printf "| %s%d |" (Atom.hint var) (Atom.identity var)) fv;
     Printf.printf "\n";*)
-    let t'', evar, efun, apply = defun t' evar efun (branch::apply) lambda in
-    T.LetBlo(var, T.Con(tag, find_fv_value fv evar), t''), evar, efun, apply
+    T.LetBlo(var, T.Con(tag, List.map (fun var -> T.VVar(var)) fv(*find_fv_value fv evar*)), t''), evar, efun, apply
 ;;
 
 let mk_apply apply = T.Fun(fun_apply, this_apply::that_apply, T.Swi(T.VVar(this_apply), apply));;
