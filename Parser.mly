@@ -1,9 +1,11 @@
 %token<string> IDENT
 %token<int> INTLITERAL
-%token FUN IN LET PRINT REC
+%token FUN IN LET PRINT REC IFZERO THEN ELSE
 %token ARROW EQ LPAREN RPAREN
 %token<RawLambda.binop> MULOP ADDOP
 %token EOF
+
+%nonassoc ELSE
 
 %start<RawLambda.term> entry
 
@@ -51,6 +53,8 @@ application_term_:
     { App (t1, t2) }
 | PRINT t2 = placed(atomic_term_)
     { Print t2 }
+| IFZERO t1 = placed(application_term_) THEN t2 = placed(application_term_) ELSE t3 = placed(application_term_)
+    { IfZero (t1, t2, t3) }
 
 %inline multiplicative_term_:
   t = left_associative_level(application_term_, MULOP, mkbinop)

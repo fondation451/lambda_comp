@@ -29,6 +29,7 @@ let rec substitution t1 x v_tg =
   |T.Print(v, t) -> T.Print(subs_val v x v_tg, substitution t x v_tg)
   |T.LetVal(varia, v, t) -> T.LetVal(varia, subs_val v x v_tg, substitution t x v_tg)
   |T.LetBlo(varia, T.Lam(s, var_l, t_lam), t) -> T.LetBlo(varia, T.Lam(s, var_l, substitution t_lam x v_tg), substitution t x v_tg)
+  |T.IfZero(v, t1, t2) -> T.IfZero(subs_val v x v_tg, substitution t1 x v_tg, substitution t2 x v_tg)
 ;;
 
 type lambda_value =
@@ -117,6 +118,13 @@ let rec cps_lambda t c namespace =
       let lett = Atom.fresh "PRINT" in
       cps_lambda (S.Let(lett, t', S.Print(S.Var(lett)))) c namespace
   end
+  |S.IfZero(t1, t2, t3) -> begin
+    match t1 with
+    |S.Var(_) |S.Lit(_) -> T.IfZero(to_tail_value t1, cps_lambda t2 c namespace, cps_lambda t3 c namespace)
+    |_ ->
+      let lett = Atom.fresh "IFCLAUSE" in
+      cps_lambda (S.Let(lett, t1, S.IfZero(S.Var(lett), t2, t3))) c namespace
+  end
 ;;
 
 let add_headers t =
@@ -124,7 +132,7 @@ let add_headers t =
   S.Let(T.identity_fun, S.Lam(S.NoSelf, x, S.Var(x)), t)
 ;;
 
-let rec cps_term (t : S.term) : T.term =
+let cps_term (t : S.term) : T.term =
   let x = Atom.fresh "x" in
   T.LetBlo(
     T.end_fun,

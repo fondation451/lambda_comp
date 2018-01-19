@@ -73,6 +73,7 @@ and term =
   | Print of value * term
   | LetVal of variable * value * term
   | LetBlo of variable * block * term
+  | IfZero of value * term * term
 
 [@@deriving show { with_path = false }]
 
@@ -133,3 +134,5 @@ and fv_term (t : term) =
       union
         (fv_block b1)
         (remove x (fv_term t2))
+  | IfZero(v, t1, t2) ->
+      union (union (fv_value v) (fv_term t1)) (fv_term t2)

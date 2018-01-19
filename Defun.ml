@@ -99,6 +99,10 @@ let rec defun t evar efun apply lambda =
     List.iter (fun var -> Printf.printf "| %s%d |" (Atom.hint var) (Atom.identity var)) fv;
     Printf.printf "\n";*)
     T.LetBlo(var, T.Con(tag, List.map (fun var -> T.VVar(var)) fv(*find_fv_value fv evar*)), t''), evar, efun, apply
+  |S.IfZero(v, t1, t2) ->
+    let t1', evar, efun, apply = defun t1 evar efun apply lambda in
+    let t2', evar, efun, apply = defun t2 evar efun apply lambda in
+    T.IfZero(v, t1', t2'), evar, efun, apply
 ;;
 
 let mk_apply apply = T.Fun(fun_apply, this_apply::that_apply, T.Swi(T.VVar(this_apply), apply));;

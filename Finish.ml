@@ -234,6 +234,12 @@ let rec finish_term (t : S.term) : C.stmt =
         finish_branches v bs,
         default
       )
+  | S.IfZero (v, t1, t2) ->
+      T.IfElse (
+        to_int (finish_value v),
+        finish_term t2,
+        finish_term t1
+      )
 
 and default : T.stmt =
   (* This default [switch] branch should never be taken. *)
