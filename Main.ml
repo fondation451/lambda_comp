@@ -5,6 +5,8 @@
 let debug =
   ref false
 
+let typing = ref false;;
+
 let filenames =
   ref []
 
@@ -14,6 +16,7 @@ let record filename =
 let options =
   Arg.align [
     "--debug", Arg.Set debug, " Enable debugging output";
+    "--typing", Arg.Set typing, " Type checking of lambda calculus";
   ]
 
 let usage =
@@ -77,6 +80,13 @@ let output (p : C.program) : unit =
 
 (* -------------------------------------------------------------------------- *)
 
+let type_checking t =
+  if !typing then
+    Type.type_term t
+  else
+    t
+;;
+
 (* The complete processing pipeline. Beautiful, isn't it? *)
 
 let process filename =
@@ -84,6 +94,7 @@ let process filename =
   |> read
   |> dump "RawLambda" RawLambda.show_term
   |> Cook.cook_term
+  |> type_checking
   |> dump "Lambda" Lambda.show_term
   |> CPS.cps_term
   |> dump "Tail" Tail.show_term

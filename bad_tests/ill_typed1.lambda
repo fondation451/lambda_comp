@@ -1,0 +1,4 @@
+let x = 4 in
+let y = 2 in
+let apply = fun a -> fun b -> a b in
+apply x y
