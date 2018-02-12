@@ -1,0 +1,3 @@
+let rec fibonacci = fun x -> ifzero x then 0 else (ifzero (x-1) then 1 else (fibonacci (x-1) + fibonacci (x-2))) in
+let x = 10 in
+print (fibonacci x)

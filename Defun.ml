@@ -17,32 +17,6 @@ let mk_tag =
   let cpt = ref 0 in fun () -> incr cpt; !cpt
 ;;
 
-(*
-and term =
-  | Exit
-  | TailCall of variable * value list
-  | Print of value * term
-  | LetVal of variable * value * term
-  | LetBlo of variable * block * term
-  | Swi of value * branch list
-
-and block =
-  | Con of tag * value list *)
-(*
-let find_fv_value fv var_env =
-  let rec loop fv out =
-    match fv with
-    |[] -> List.rev out
-    |var::t -> try
-(*      Printf.printf "LOOKING FOR VAR %s\n\n" (Atom.hint var);*)
-      let tmp = VarMap.find var var_env in
-      match tmp with
-      |T.VVar(_) -> loop t ((T.VVar(var))::out)
-      |_ -> loop t (tmp::out)
-    with Not_found -> assert false
-  in loop fv []
-;;
-*)
 let normalize_fun_arg var_l =
   let rec loop var_l len =
     if len >= apply_nb_arg then
