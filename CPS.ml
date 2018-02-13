@@ -30,6 +30,8 @@ let rec substitution t1 x v_tg =
   |T.LetVal(varia, v, t) -> T.LetVal(varia, subs_val v x v_tg, substitution t x v_tg)
   |T.LetBlo(varia, T.Lam(s, var_l, t_lam), t) -> T.LetBlo(varia, T.Lam(s, var_l, substitution t_lam x v_tg), substitution t x v_tg)
   |T.IfZero(v, t1, t2) -> T.IfZero(subs_val v x v_tg, substitution t1 x v_tg, substitution t2 x v_tg)
+  |T.BeginMutual(t1) -> T.BeginMutual(substitution t1 x v_tg)
+  |T.EndMutual(t1) -> T.EndMutual(substitution t1 x v_tg)
 ;;
 
 type lambda_value =
@@ -125,6 +127,8 @@ let rec cps_lambda t c namespace =
       let lett = Atom.fresh "IFCLAUSE" in
       cps_lambda (S.Let(lett, t1, S.IfZero(S.Var(lett), t2, t3))) c namespace
   end
+  |S.BeginMutual(t1) -> T.BeginMutual(cps_lambda t1 c namespace)
+  |S.EndMutual(t1) -> T.EndMutual(cps_lambda t1 c namespace)
 ;;
 
 let add_headers t =

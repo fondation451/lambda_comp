@@ -51,6 +51,20 @@ let rec cook_term env { S.place; S.value } =
       error place "the right-hand side of 'let rec' must be a lambda-abstraction"
   | S.IfZero (t1, t2, t3) ->
       T.IfZero (cook_term env t1, cook_term env t2, cook_term env t3)
+  | S.AndLet(f_l, t1_l, t2) ->
+    let env, f_l = List.fold_right (fun f (env, out) -> let env, f = bind env f in env, f::out) f_l (env, []) in
+    T.BeginMutual(List.fold_right2
+                  (fun f t1 out ->
+                    match t1 with
+                    |{S.value = S.Lam (x, t1); _} ->
+                      let x, t1 =
+                        let env, x = bind env x in
+                        x, cook_term env t1
+                      in
+                      T.Let(f, T.Lam(T.Self f, x, t1), out))
+                  f_l
+                  t1_l
+                  (T.EndMutual(cook_term env t2)))
 
 let cook_term t =
   cook_term Env.empty t

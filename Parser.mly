@@ -1,6 +1,6 @@
 %token<string> IDENT
 %token<int> INTLITERAL
-%token FUN IN LET PRINT REC IFZERO THEN ELSE
+%token FUN IN LET PRINT REC IFZERO THEN ELSE AND MUTUAL
 %token ARROW EQ LPAREN RPAREN
 %token<RawLambda.binop> MULOP ADDOP
 %token EOF
@@ -69,12 +69,21 @@ any_term_:
     { t }
 | FUN x = IDENT ARROW t = any_term
     { Lam (x, t) }
+| MUTUAL x = IDENT EQ t1 = any_term l_def = nonempty_list(mutual_def_) IN t2 = any_term
+    {
+      let x_l = x::(List.rev_map fst l_def) in
+      let def = t1::(List.rev_map snd l_def) in
+      AndLet(x_l, def, t2)
+    }
 | LET mode = recursive x = IDENT EQ t1 = any_term IN t2 = any_term
     { Let (mode, x, t1, t2) }
 
 %inline any_term:
   t = placed(any_term_)
     { t }
+
+mutual_def_:
+| AND x = IDENT EQ t1 = any_term { (x, t1) }
 
 (* -------------------------------------------------------------------------- *)
 

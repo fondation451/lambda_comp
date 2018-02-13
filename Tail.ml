@@ -74,6 +74,8 @@ and term =
   | LetVal of variable * value * term
   | LetBlo of variable * block * term
   | IfZero of value * term * term
+  | BeginMutual of term
+  | EndMutual of term
 
 [@@deriving show { with_path = false }]
 
@@ -108,31 +110,45 @@ let rec fv_value (v : value) =
 and fv_values (vs : value list) =
   union_many fv_value vs
 
-and fv_lambda (xs : variable list) (t : term) =
-  diff (fv_term t) (of_list xs)
+and fv_lambda (xs : variable list) (t : term) mutual_def =
+  diff (fv_term t mutual_def) (of_list xs)
 
-and fv_block (b : block) =
+and fv_block (b : block) mutual_def =
   match b with
   | Lam (NoSelf, xs, t) ->
-      fv_lambda xs t
+      fv_lambda xs t mutual_def
   | Lam (Self f, xs, t) ->
-      remove f (fv_lambda xs t)
+      remove f (fv_lambda xs t mutual_def)
 
-and fv_term (t : term) =
-  match t with
+and fv_term (t : term) mutual_def =
+  (fun fv ->
+    if mutual_def <> [] then
+      diff fv (of_list (List.hd mutual_def))
+    else
+      fv)
+  (match t with
   | Exit ->
       empty
   | TailCall (v, vs) ->
       fv_values (v :: vs)
   | Print (v1, t2) ->
-      union (fv_value v1) (fv_term t2)
+      union (fv_value v1) (fv_term t2 mutual_def)
   | LetVal (x, v1, t2) ->
       union
         (fv_value v1)
-        (remove x (fv_term t2))
+        (remove x (fv_term t2 mutual_def))
   | LetBlo (x, b1, t2) ->
-      union
-        (fv_block b1)
-        (remove x (fv_term t2))
+      if mutual_def <> [] then
+        let mutual_fv = List.hd mutual_def in
+        let mutual_rec = List.tl mutual_def in
+        union
+          (fv_block b1 mutual_def)
+          (remove x (fv_term t2 ((x::mutual_fv)::mutual_rec)))
+      else
+        union
+          (fv_block b1 mutual_def)
+          (remove x (fv_term t2 mutual_def))
   | IfZero(v, t1, t2) ->
-      union (union (fv_value v) (fv_term t1)) (fv_term t2)
+      union (union (fv_value v) (fv_term t1 mutual_def)) (fv_term t2 mutual_def)
+  | BeginMutual(t1) -> fv_term t1 ([]::mutual_def)
+  | EndMutual(t1) -> fv_term t1 (List.tl mutual_def))

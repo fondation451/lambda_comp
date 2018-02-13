@@ -204,7 +204,7 @@ let scall f args : T.stmt =
 
 (* The translation of terms. *)
 
-let rec finish_term (t : S.term) : C.stmt =
+let rec finish_term (t : S.term) mutual_queue in_mutual : C.stmt =
   match t with
   | S.Exit ->
       T.Compound [
@@ -215,31 +215,48 @@ let rec finish_term (t : S.term) : C.stmt =
   | S.Print (v, t) ->
       T.Compound [
         scall printf [ T.Literal "%d\\n"; to_int (finish_value v) ];
-        finish_term t
+        finish_term t mutual_queue in_mutual
       ]
   | S.LetVal (x, v1, t2) ->
       T.Compound [
         T.DeclStmt (declare x (Some (T.InitExpr (finish_value v1))));
-        finish_term t2
+        finish_term t2 mutual_queue in_mutual
       ]
   | S.LetBlo (x, b1, t2) ->
-      T.Compound (
-        T.DeclStmt (declare x (Some (T.InitExpr (alloc b1)))) ::
-        init_block x b1 @
-        [ finish_term t2 ]
-      )
+      if in_mutual <> [] then
+        let mutual_def = List.hd mutual_queue in
+        let mutual_rec = List.tl mutual_queue in
+        T.Compound (
+          T.DeclStmt (declare x (Some (T.InitExpr (alloc b1)))) ::
+          [finish_term t2 (((x, b1)::mutual_def)::mutual_rec) in_mutual]
+        )
+      else
+        T.Compound (
+          T.DeclStmt (declare x (Some (T.InitExpr (alloc b1)))) ::
+          init_block x b1 @
+          [ finish_term t2 mutual_queue in_mutual ]
+        )
   | S.Swi (v, bs) ->
       T.Switch (
         read_tag v,
-        finish_branches v bs,
+        finish_branches v bs mutual_queue in_mutual,
         default
       )
   | S.IfZero (v, t1, t2) ->
       T.IfElse (
         to_int (finish_value v),
-        finish_term t2,
-        finish_term t1
+        finish_term t2 mutual_queue in_mutual,
+        finish_term t1 mutual_queue in_mutual
       )
+  | S.BeginMutual(t1) -> finish_term t1 ([]::mutual_queue) (true::in_mutual)
+  | S.EndMutual(t1) ->
+    let mutual_def = List.hd mutual_queue in
+    T.Compound (
+      List.fold_right
+        (fun (x, b1) out -> init_block x b1 @ out)
+        mutual_def
+        [finish_term t1 (List.tl mutual_queue) (List.tl in_mutual)]
+    )
 
 and default : T.stmt =
   (* This default [switch] branch should never be taken. *)
@@ -248,12 +265,12 @@ and default : T.stmt =
     scall exit [ iconst 42 ];
   ]
 
-and finish_branches v bs =
-  List.map (finish_branch v) bs
+and finish_branches v bs mutual_queue in_mutual =
+  List.map (fun b -> finish_branch v b mutual_queue in_mutual) bs
 
-and finish_branch v (S.Branch (tag, xs, t)) : T.expr * T.stmt =
+and finish_branch v (S.Branch (tag, xs, t)) mutual_queue in_mutual : T.expr * T.stmt =
   iconst tag,
-  T.Compound (read_fields v xs [finish_term t])
+  T.Compound (read_fields v xs [finish_term t mutual_queue in_mutual])
 
 (* -------------------------------------------------------------------------- *)
 
@@ -293,7 +310,7 @@ let define (decl : T.declaration) (t : S.term) : decl_or_fun =
     [],    (* no comments *)
     false, (* not inlined *)
     decl,
-    T.Compound [finish_term t]
+    T.Compound [finish_term t [] []]
   )
 
 let define_ordinary_function (S.Fun (f, xs, t)) : decl_or_fun =

@@ -34,6 +34,10 @@ let digit =
 (* The lexer. *)
 
 rule entry = parse
+| "and"
+    { AND }
+| "mutual"
+    { MUTUAL }
 | "fun"
     { FUN }
 | "in"

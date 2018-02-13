@@ -55,8 +55,8 @@ let rec defun t evar efun apply lambda =
     let tag = mk_tag () in
     let fv =
       match s with
-      |S.Self(fix) -> fix::(Atom.Set.elements (S.fv_block b))
-      |_ -> Atom.Set.elements (S.fv_block b)
+      |S.Self(fix) -> fix::(Atom.Set.elements (S.fv_block b []))
+      |_ -> Atom.Set.elements (S.fv_block b [])
     in
     let evar_lam =
       match s with
@@ -77,6 +77,12 @@ let rec defun t evar efun apply lambda =
     let t1', evar, efun, apply = defun t1 evar efun apply lambda in
     let t2', evar, efun, apply = defun t2 evar efun apply lambda in
     T.IfZero(v, t1', t2'), evar, efun, apply
+  |S.BeginMutual(t') ->
+    let t'', evar, efun, apply = defun t' evar efun apply lambda in
+    T.BeginMutual(t''), evar, efun, apply
+  |S.EndMutual(t') ->
+    let t'', evar, efun, apply = defun t' evar efun apply lambda in
+    T.EndMutual(t''), evar, efun, apply
 ;;
 
 let mk_apply apply = T.Fun(fun_apply, this_apply::that_apply, T.Swi(T.VVar(this_apply), apply));;
@@ -100,6 +106,8 @@ let rec subs esubs t =
       List.map (fun (T.Branch(tag, var_l, t1)) -> T.Branch(tag, List.map (subs_var esubs) var_l, subs esubs t1)) br_l
     )
   |T.IfZero(v, t1, t2) -> T.IfZero(subs_v esubs v, subs esubs t1, subs esubs t2)
+  |T.BeginMutual(t1) -> T.BeginMutual(subs esubs t1)
+  |T.EndMutual(t1) -> T.EndMutual(subs esubs t1)
 and subs_v esubs v =
   match v with
   |T.VVar(var) -> T.VVar(subs_var esubs var)

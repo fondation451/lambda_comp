@@ -1,0 +1,8 @@
+mutual f =
+  fun x ->
+    mutual gg = fun y -> ifzero y then 0 else ff (((print (y * 100)) / 100) - 1)
+    and ff = fun y -> ifzero y then 0 else gg (((print (y * 10)) / 10) - 1)
+    in
+    g (ff x)
+and g = fun x -> print 510 in
+print (f 2)

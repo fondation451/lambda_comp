@@ -1,181 +1,7 @@
 open Lambda;;
 
 exception Type_Error of string;;
-
-(*
-module VarMap = Map.Make(struct
-  type t = Atom.atom;;
-  let compare = Atom.compare;;
-end);;
-
-module IntMap = Map.Make(struct
-  type t = int;;
-  let compare = compare;;
-end);;
-
-let mk_alpha =
-  let cpt = ref 0 in fun () -> incr cpt; !cpt
-;;
-
-type type_system =
-  |TAlpha of int
-  |TInt
-  |TFun of type_system * type_system
-  |TForAlpha of int * type_system
-;;
-
-let rec str_ty ty =
-  match ty with
-  |TAlpha(a) -> Printf.sprintf "alpha%d" a
-  |TInt -> "int"
-  |TFun(ty1, ty2) -> Printf.sprintf "(%s -> %s)" (str_ty ty1) (str_ty ty2)
-  |TForAlpha(a, ty1) -> Printf.sprintf "(forall alpha%d, %s)" a (str_ty ty1)
-;;
-
-let str_intmap tenv =
-  List.fold_left
-    (fun out (a, sty) ->
-      Printf.sprintf
-        "%s(%d, %s), "
-        out
-        a
-        (match sty with |Some(ty) -> str_ty ty |None -> "_"))
-    ""
-    (IntMap.bindings tenv)
-;;
-
-let str_varmap venv =
-  List.fold_left
-    (fun out (var, ty) -> Printf.sprintf "%s(%s%d, %s), " out (Atom.hint var) (Atom.identity var) (str_ty ty))
-    ""
-    (VarMap.bindings venv)
-;;
-
-let set_alpha alpha ty tenv =
-  match ty with
-  |TAlpha(alpha') when alpha' = alpha -> tenv
-  |_ -> IntMap.add alpha (Some(ty)) tenv
-;;
-
-let rec get_alpha alpha tenv =
-  Printf.printf "CALL GET_ALPHA alpha%d\ntenv = %s\n\n" alpha (str_intmap tenv);
-  match IntMap.find alpha tenv with
-  |Some(TAlpha(alpha')) -> get_alpha alpha' tenv
-  |Some(ty) -> normalize_ty ty tenv
-  |None -> TAlpha(alpha)
-and normalize_ty ty tenv =
-  Printf.printf "CALL NORMALIZE_TY %s\ntenv = %s\n\n" (str_ty ty) (str_intmap tenv);
-  match ty with
-  |TAlpha(alpha) -> get_alpha alpha tenv
-  |TInt -> TInt
-  |TFun(ty1, ty2) -> TFun(normalize_ty ty1 tenv, normalize_ty ty2 tenv)
-;;
-
-let rec try_merge ty1 ty2 tenv venv =
-  Printf.printf "CALL TRY_MERGE %s %s\ntenv = %s\nvenv = %s\n\n" (str_ty ty1) (str_ty ty2) (str_intmap tenv) (str_varmap venv);
-  match normalize_ty ty1 tenv, normalize_ty ty2 tenv with
-  |TAlpha(a1), _ -> Some(ty2), set_alpha a1 ty2 tenv, venv
-  |_, TAlpha(a2) -> Some(ty1), set_alpha a2 ty1 tenv, venv
-  |TInt, TInt -> Some(TInt), tenv, venv
-  |TFun(ty11, ty12), TFun(ty21, ty22) -> begin
-    let result1, tenv, venv = try_merge ty11 ty21 tenv venv in
-    let result2, tenv, venv = try_merge ty12 ty22 tenv venv in
-    match result1, result2 with
-    |Some(merge_ty1), Some(merge_ty2) -> Some(TFun(merge_ty1, merge_ty2)), tenv, venv
-    |_ -> None, tenv, venv
-  end
-  |_ -> None, tenv, venv
-;;
-
-
-let rec typing t tenv venv =
-  Printf.printf "CALL TYPING\n%s\ntenv = %s\nvenv = %s\n\n" (show_term t) (str_intmap tenv) (str_varmap venv);
-  match t with
-  |Var(var) -> normalize_ty (VarMap.find var venv) tenv, tenv, venv
-  |Lam(s, var, t1) -> begin
-    let alpha = mk_alpha () in
-    match s with
-    |Self(var') ->
-      let alpha_fun = mk_alpha () in
-      let ty1, tenv, venv =
-        typing
-          t1
-          (IntMap.add alpha_fun None (IntMap.add alpha None tenv))
-          (VarMap.add var' (TAlpha(alpha_fun)) (VarMap.add var (TAlpha(alpha)) venv))
-      in
-      let ty_var = get_alpha alpha tenv in
-      let ty_fun = get_alpha alpha_fun tenv in
-      if ty_fun = TFun(ty_var, ty1) then
-        TFun(ty_var, ty1), tenv, venv
-      else
-        raise (Type_Error("Lam rec"))
-    |NoSelf ->
-      let ty1, tenv, venv = typing t1 (IntMap.add alpha None tenv) (VarMap.add var (TAlpha(alpha)) venv) in
-      let ty_var = get_alpha alpha tenv in
-      TFun(ty_var, ty1), tenv, venv
-  end
-  |App(t1, t2) -> begin
-    let ty1, tenv, venv = typing t1 tenv venv in
-    match ty1 with
-    |TFun(ty_src, ty_tg) -> begin
-      let ty2, tenv, venv = typing t2 tenv venv in
-      Printf.printf "\n\n\n\n\n--------------------\nDEBUG\n%s\n\n\n\n\n\n" (show_term t);
-      let ty_merge, tenv, venv = try_merge ty2 ty_src tenv venv in
-      match ty_merge with
-      |Some(_) -> ty_tg, tenv, venv
-      |None -> raise (Type_Error("App Fun"))
-    end
-    |TAlpha(alpha_fun) ->
-      let alpha = mk_alpha () in
-      let ty2, tenv, venv = typing t2 tenv venv in
-      TAlpha(alpha), IntMap.add alpha None (IntMap.add alpha_fun (Some(TFun(ty2, TAlpha(alpha)))) tenv), venv
-    |_ -> raise (Type_Error("App Alpha"))
-  end
-  |Lit(_) -> TInt, tenv, venv
-  |BinOp(t1, _, t2) -> begin
-    let ty1, tenv, venv = typing t1 tenv venv in
-    let ty2, tenv, venv = typing t2 tenv venv in
-    let ty_merge1, tenv, venv = try_merge ty1 TInt tenv venv in
-    let ty_merge2, tenv, venv = try_merge ty2 TInt tenv venv in
-    match ty_merge1, ty_merge2 with
-    |Some(_), Some(_) -> TInt, tenv, venv
-    |_ -> raise (Type_Error("Binop"))
-  end
-  |Print(t1) -> begin
-    let ty1, tenv, venv = typing t1 tenv venv in
-    let ty_merge1, tenv, venv = try_merge ty1 TInt tenv venv in
-    match ty_merge1 with
-    |Some(_) -> TInt, tenv, venv
-    |None -> raise (Type_Error("Print"))
-  end
-  |Let(var, t1, t2) ->
-    let ty1, tenv, _ = typing t1 tenv venv in
-    typing t2 tenv (VarMap.add var ty1 venv)
-  |IfZero(t1, t2, t3) -> begin
-    let ty1, tenv, venv = typing t1 tenv venv in
-    let ty2, tenv, venv = typing t2 tenv venv in
-    let ty3, tenv, venv = typing t3 tenv venv in
-    let ty_merge1, tenv, venv = try_merge ty1 TInt tenv venv in
-    match ty_merge1 with
-    |None -> raise (Type_Error("IfZero Cond"))
-    |Some(_) -> begin
-      let ty_merge2, tenv, venv = try_merge ty2 ty3 tenv venv in
-      match ty_merge2 with
-      |None -> raise (Type_Error("IfZero Clause"))
-      |Some(out_ty) -> out_ty, tenv, venv
-    end
-  end
-;;
-
-
-let type_term t =
-  let ty, tenv, venv = typing t IntMap.empty VarMap.empty in
-  Printf.printf "TYPE RESULT %s\ntenv = %s\nvenv = %s\n\n" (str_ty (normalize_ty ty tenv)) (str_intmap tenv) (str_varmap venv);
-  t
-;;
-
-
-*)
+exception Mutual_Def;;
 
 (* ALGORITHM W *)
 
@@ -341,11 +167,14 @@ let rec type_infer env t =
     let s3, t3 = type_infer (apply_env s1 env) e3 in
     let s4 = mgu (apply_m s2 t2) (apply_m s3 t3) in
     compose_subs s1' (compose_subs s2 (compose_subs s3 s4)), apply_m s4 t2
+  |BeginMutual(e1) -> raise Mutual_Def
 ;;
 
 let type_inference env t =
-  let s, t = type_infer env t in
-  apply_m s t
+  try
+    let s, t = type_infer env t in
+    apply_m s t
+  with Mutual_Def -> TInt
 ;;
 
 let type_term t =

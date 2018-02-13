@@ -1,0 +1,6 @@
+let rec f = fun x ->
+  let z = x - 1 in
+  let g = fun y -> y * x in
+  g z
+in
+print (f 5)
