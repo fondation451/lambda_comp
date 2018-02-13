@@ -1,6 +1,9 @@
 # lambda_comp
-Lambda calculus to C compiler
+Lambda calculus to C compiler.
+
 Project for the MPRI course "Functional Programming and type systems".
+
+The code can be found at https://github.com/fondation451/lambda_comp.
 
 ### Compilation
 
