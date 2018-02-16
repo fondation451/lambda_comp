@@ -50,7 +50,7 @@ ifzero $var then $term else $term
 
 Some optional tasks have been implemented too.
 * Elimination of variable to variable bindings. It is implemented in the file Defun.ml by the functions `eliminate` and `subs`.
-* Typing of the lambda calculus. The algorithm used is the Algorithm W. It works fine on every example except bool.lambda. Unfortunately, we haven't been able to find out the reason. It is implemented in the files type.ml and type.mli. In the directory bad_test, you can find pretty naive example of ill-typed lambda calculus program.
+* Typing of the lambda calculus. The algorithm used is the Algorithm W. It works fine on every example except bool.lambda. Unfortunately, we haven't been able to find out the reason. It is implemented in the files type.ml and type.mli. In the directory bad_test, you can find pretty naive example of ill-typed lambda calculus program. Typing is not done in the usual compilation process. In order to activate typing, you need to add the `--typing` option during compilation.
 * Mutually recursive function. The syntax has been extend with new key words : `mutual` and `and`. It allows to express mutually recursive function. It has been done by adding begining and ending tag of mutual definition so that the CPS and the Defun round are not modified. It works fine with simple mutual definition, but when we write imbricate mutual definition (see the test file mutual2.lambda), it doesn't work. That is due to a problem in the computation of the free variable in TAIL. It has been fixed yet. To see an example of mutual definition which works, you should look at mutual1.lambda.
 
 ## Authors
