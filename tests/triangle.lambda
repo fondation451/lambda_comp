@@ -1,0 +1,56 @@
+(*
+  Construit le triangle de Pascal
+  Il n'y a pas de chaine de caractere,
+  donc les lignes sont calculees dans un
+  gros nombre.
+  C'est pourquoi, a partir de la ligne 6,
+  le nombre devient trop gros pour les entiers
+  machine et la ligne ne peut etre calculee.
+
+  triangle x ne devrait pas etre utilise pour
+  un nombre superieur a 6.
+*)
+let rec binomial = fun n -> fun k ->
+  let tmp = n - k in
+  ifzero k then
+    1
+  else (
+    ifzero tmp then
+      1
+    else (
+      (binomial (n-1) (k-1)) + (binomial (n-1) k)
+    )
+  )
+in
+let rec closest_pow = fun x ->
+  ifzero x then
+    1
+  else (
+    10 * (closest_pow (x/10))
+  )
+in
+let triangle_line = fun n ->
+  let rec triangle_line_loop = fun n -> fun k -> fun acc ->
+    let tmp = n - k + 1 in
+    ifzero tmp then
+      acc
+    else (
+      let bin = binomial n k in
+      triangle_line_loop n (k+1) (acc * (closest_pow bin) + bin)
+    )
+  in
+  triangle_line_loop n 0 0
+in
+let triangle = fun n ->
+  let rec loop = fun k ->
+    let tmp = n - k + 1 in
+    ifzero tmp then
+      0
+    else (
+      let _ = print (triangle_line k) in
+      loop (k+1)
+    )
+  in
+  loop 0
+in
+triangle 6
