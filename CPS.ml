@@ -88,7 +88,7 @@ let rec cps_lambda t c namespace =
   end
   |S.Let(v, t1, t2) -> begin
     match t1 with
-    |S.Lam(s', v', t') ->
+    |S.Lam(_) ->
       let x1 = Atom.fresh "LETB" in
       cps_lambda t1 (META(x1, cps_lambda t2 c namespace)) v
     |_ ->
